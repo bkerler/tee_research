@@ -20,5 +20,7 @@ Copy the python script to your ~/ghidra_scripts folder
 - Use the mclf loader plugin, then run the scripts to get tlApi and other functions labeled
 
 ## References
+
 https://github.com/NeatMonster/mclf-ghidra-loader
+
 https://github.com/ghassani/mclf-ida-loader
