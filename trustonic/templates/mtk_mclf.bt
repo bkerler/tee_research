@@ -1,0 +1,137 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.1 Binary Template
+//
+//      File: mtk_tee
+//   Authors: Bjoern Kerler
+//   Version: 1.0
+//   Purpose: Mediatek TZ Parser
+//  Category: Operating system
+// File Mask: *
+//  ID Bytes: 4D 43 4C 46
+//   History: 
+//   1.0   2019-09-13 Bjoern Kerler: Added MTK6580 Tee
+//------------------------------------------------
+
+/** Length of SUID. */
+#define MC_SUID_LEN    16
+
+/** Platform specific device identifier (serial number of the chip). */
+typedef struct {
+    unsigned char data[MC_SUID_LEN - sizeof(uint32_t)]<format=hex>;
+} suidData_t;
+
+/** Soc unique identifier type. */
+typedef struct {
+    unsigned int    sipId<format=hex>;  /**< Silicon Provider ID to be set during build. */
+    suidData_t  suidData;
+} mcSuid_t;
+
+#define MC_DRV_VENDOR_ID_SHIFT     (16)
+#define MC_DRV_VENDOR_ID_MASK      (0xFFFF << MC_DRV_VENDOR_ID_SHIFT)
+#define MC_DRV_NUMBER_MASK         (0x0000FFFF)
+
+/** MobiCore vendor IDs. */
+typedef enum {
+    MC_DRV_VENDOR_ID_GD   = 0 << MC_DRV_VENDOR_ID_SHIFT,
+} mcDrvVendorId_t;
+
+/** MobiCore GD driver numbers. */
+typedef enum {
+    MC_DRV_NUMBER_INVALID = 0,
+    MC_DRV_NUMBER_CRYPTO  = 1,
+    /** Last GD driver number reserved for pre-installed drivers.
+     * GD driver numbers up to this constant may not be used for loadable drivers. */
+    MC_DRV_NUMBER_LAST_PRE_INSTALLED = 100,
+    TB_DRV_NUMBER_TUI  = 0x101,
+    TB_DRV_NUMBER_SFS  = 0x104,
+    TB_DRV_NUMBER_TPLAY  = 0x600,
+} mcDrvNumber_t;
+
+/** MobiCore driver IDs for Trustlets. */
+typedef enum {
+    MC_DRV_ID_INVALID = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_INVALID,
+    MC_DRV_ID_CRYPTO  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_CRYPTO,
+    MC_DRV_ID_SFS  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_SFS,
+    /** Last GD driver ID reserved for pre-installed drivers.
+     * GD driver IDs up to this constant may not be used for loadable drivers. */
+    MC_DRV_ID_LAST_PRE_INSTALLED = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_LAST_PRE_INSTALLED,
+    TB_DRV_ID_TUI  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_TUI,
+    TB_DRV_ID_TPLAY  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_TPLAY,
+} mcDriverId_t;
+
+typedef struct {
+    unsigned int        magic<format=hex>;      /**< Header magic value ASCII "MCLF". */
+    unsigned int        version<format=hex>;    /**< Version of the MCLF header structure. */
+} mclfIntro_t;
+
+typedef enum {
+    MCLF_MEM_TYPE_INTERNAL_PREFERRED = 0, /**< If available use internal memory; otherwise external memory. */
+    MCLF_MEM_TYPE_INTERNAL = 1, /**< Internal memory must be used for executing the service. */
+    MCLF_MEM_TYPE_EXTERNAL = 2, /**< External memory must be used for executing the service. */
+} memType_t;
+
+typedef enum {
+    SERVICE_TYPE_ILLEGAL         = 0, /**< Service type is invalid. */
+    SERVICE_TYPE_DRIVER          = 1, /**< Service is a driver. */
+    SERVICE_TYPE_SP_TRUSTLET     = 2, /**< Service is a Trustlet. */
+    SERVICE_TYPE_SYSTEM_TRUSTLET = 3, /**< Service is a system Trustlet. */
+    SERVICE_TYPE_MIDDLEWARE      = 4, /**< Service is a middleware. */
+    SERVICE_TYPE_LAST_ENTRY      = 5, /**< marker for last entry */
+} serviceType_t;
+
+/**
+ * Descriptor for a memory segment.
+ */
+typedef struct {
+    unsigned int    start<format=hex>;  /**< Virtual start address. */
+    unsigned int    len<format=hex>;    /**< Length of the segment in bytes. */
+} segmentDescriptor_t;
+
+
+typedef struct
+{
+    mclfIntro_t intro;
+    unsigned int flags<format=hex>;
+    memType_t memType;
+    serviceType_t serviceType;
+    unsigned int numInstances<format=hex>;
+    unsigned int64 uuid<format=hex>;
+    mcDriverId_t driverId;
+    unsigned int numThreads;
+    segmentDescriptor_t text;
+    segmentDescriptor_t data;
+    unsigned int bssLen<format=hex>;
+    unsigned int entry<format=hex>;
+    unsigned int serviceVersion<format=hex>;
+} mclfHeaderV2_t;
+
+/**
+ * Version 2.3 MCLF header.
+ */
+typedef struct {
+    mcSuid_t                permittedSuid;  /**< Starting 2.3: If nonzero, suid which is allowed to execute binary */
+    unsigned int            permittedHwCfg<format=hex>; /**< Starting 2.3: If nonzero, hw configuration which is allowed to execute binary */
+} mclfHeaderV23_t;
+
+
+/**
+ * Version 2.4 MCLF header.
+ */
+typedef struct {
+    unsigned int            gp_level<format=hex>;           /**<Starting 2.4: 0 for legacy MobiCore trustlets and 1 for Potato TAs. */
+    unsigned int            attestationOffset<format=hex>;  /**<Starting 2.4: Offset of attestation data area. */
+
+} mclfHeaderV24_t;
+
+FSeek(GetCursorPos());
+LittleEndian();
+
+mclfHeaderV2_t mclf<optimize=false>;
+if (mclf.intro.version==0x00020003)
+{
+    mclfHeaderV23_t hdrv23;
+}
+else if (mclf.intro.version>=0x00020004)
+{
+    mclfHeaderV24_t hdrv23;
+}

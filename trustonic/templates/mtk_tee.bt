@@ -1,0 +1,52 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.1 Binary Template
+//
+//      File: mtk_tee
+//   Authors: Bjoern Kerler
+//   Version: 1.0
+//   Purpose: Mediatek TZ Parser
+//  Category: Operating system
+// File Mask: *
+//  ID Bytes: 88 16 88 58
+//   History: 
+//   1.0   2019-09-13 Bjoern Kerler: Added MTK6580 Tee
+//------------------------------------------------
+
+typedef union
+{
+    struct
+    {
+        unsigned int magic<format=hex>;     /* partition magic */
+        unsigned int dsize<format=hex>;     /* partition data size */
+        char name[32];          /* partition name */
+        unsigned int maddr<format=hex>;     /* partition memory address */
+	unsigned int mode<format=hex>;
+    } info;
+    unsigned char data[512];
+} part_hdr_t;
+
+typedef union
+{
+    struct
+    {
+        unsigned int magic1<format=hex>; /* TEE */
+        unsigned int magic2<format=hex>; /* MTK */
+        unsigned int teehdr_size<format=hex>;
+        unsigned char opt1<format=hex>; 
+        unsigned char is_encrypted<format=hex>;
+        unsigned char is_signed<format=hex>;
+        unsigned char opt2<format=hex>;  
+	    unsigned int mode<format=hex>;
+        unsigned int signaturelen1<format=hex>;
+        unsigned int signaturelen2<format=hex>;
+        unsigned char reserved[0x120];
+        unsigned char signature[0x100];
+        unsigned int dram_size<format=hex>;
+    } info;
+    unsigned char teehdr[info.teehdr_size];
+} tee_hdr;
+
+part_hdr_t parthdr;
+tee_hdr tee;
+unsigned char tee_data[tee.info.signaturelen1];
+unsigned char tee_data2[tee.info.signaturelen2];
